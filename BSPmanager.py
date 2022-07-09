@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 import shutil
 import struct
@@ -24,7 +24,7 @@ def createfile(path, lines):
 # Создания дефолтного конфига
 def create_config(path):
     print ('Create config file.')
-    lines = ['# Список со стандартными файлами, которые не будут учитываться', 'backlistres = backlistres.txt', '# Копировать ли карту с файлами', 'copymode = 1', '# Куда копировать карту', 'copydir = .\\maps', '# Копировать ли карту, если есть ошибки (0 - копировать, 1 - выводить ошибку, с возможностью копирования 2 - не копировать)', 'copyiferrors = 1', '# Создовать ли res файл (если copymode=1, создает в copydir, если 0 - в папке с картой)', 'genresfile = 1', '# Показывать ли res файл', 'showresfie = 1', '# Проверять ли наличие файлов по res списку (автоматически работает при copymode=1)', 'testfilelist = 1']
+    lines = ['# Список со стандартными файлами, которые не будут учитываться', 'backlistres = backlistres.txt', '# Копировать ли карту с файлами', 'copymode = 1', '# Куда копировать карту', 'copydir = maps', '# Копировать ли карту, если есть ошибки (0 - копировать, 1 - выводить ошибку, с возможностью копирования 2 - не копировать)', 'copyiferrors = 1', '# Создовать ли res файл (если copymode=1, создает в copydir, если 0 - в папке с картой)', 'genresfile = 1', '# Показывать ли res файл', 'showresfie = 1', '# Проверять ли наличие файлов по res списку (автоматически работает при copymode=1)', 'testfilelist = 1', '# Куда создавать маппак', 'packdir = mappack']
     createfile(path,lines)
 
 # Чтение конфига
@@ -182,6 +182,35 @@ def showerrors(x, warn=0):
     else:
         print("Completed successfully")
 
+def tree_printer(root):
+    reslist = []
+    for root, dirs, files in os.walk(root):
+        for f in files:
+            reslist.append(os.path.join(root, f))
+    return reslist
+
+def genmappack(srcmaps, dstmaps):
+    # Создание папки, если третуется
+    if not os.path.exists(dstmaps):
+        os.makedirs(dstmaps)
+
+    filelist=tree_printer(srcmaps)
+
+    for i in filelist:
+        file_dst=os.path.join(dstmaps, (i.lstrip(srcmaps).split('\\',1)[1]))
+        print('Copy file: ', i.lstrip(srcmaps))
+        if not os.path.isfile(file_dst):
+            filedir_dst = os.path.dirname(file_dst)
+            if not os.path.exists(filedir_dst):
+                os.makedirs(filedir_dst)
+            shutil.copyfile(i, file_dst)
+        else:
+            print('File: ',file_dst,' already exists')
+            input()
+    print("Completed successfully")
+    input()
+    sys.exit()
+
 # Файл конфига
 configfile=os.path.join(os.path.dirname(sys.argv[0]), 'config.ini')
 
@@ -198,6 +227,7 @@ copyiferrors = int(read_config(configfile, 'copyiferrors'))
 genresfile = int(read_config(configfile, 'genresfile'))
 showresfie = int(read_config(configfile, 'showresfie'))
 testfilelist = int(read_config(configfile, 'testfilelist'))
+packdir = read_config(configfile, 'packdir')
 # Папка со скриптом
 softdir = os.path.dirname(sys.argv[0])
 
@@ -208,7 +238,12 @@ if len(sys.argv) > 1:
 else:
     print("Путь к BSP:")
     bspfullname = input()
-    
+
+if (bspfullname == 'p'):
+    srccopydir = os.path.join(softdir, copydir)
+    dstpackdir = os.path.join(softdir, packdir)
+    genmappack(srccopydir, dstpackdir)
+
 print('Test map: ', bspfullname)
 # Проверяем bsp файл
 testbspfile(bspfullname)
@@ -262,12 +297,7 @@ if (testfilelist == 1) & (copymode == 0):
 
 if copymode == 1:
     # outdir - путь сохранения карты
-    if not copydir:
-        outdir = os.path.join(softdir, mapname)
-    elif copydir[0] == '.':
-        outdir = os.path.join(softdir, copydir, mapname)
-    else:
-        outdir = os.path.join(copydir, mapname)
+    outdir = os.path.join(softdir, copydir, mapname)
     copymap(modedir, outdir, resfile, copyiferrors)
 if genresfile == 1:
     if copymode == 1:
